@@ -1,51 +1,14 @@
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+
 ///<reference path="../typings/angularjs/angular.d.ts"/>
 
-/*
- * decorates $compileProvider so that we have access to routing metadata
- */
-function compilerProviderDecorator($compileProvider,
-                                   $$directiveIntrospectorProvider: DirectiveIntrospectorProvider) {
-  let directive = $compileProvider.directive;
-  $compileProvider.directive = function(name: string, factory: Function) {
-    $$directiveIntrospectorProvider.register(name, factory);
-    return directive.apply(this, arguments);
-  };
-}
 
-/*
- * private service that holds route mappings for each controller
- */
-class DirectiveIntrospectorProvider {
-  private directiveBuffer: any[] = [];
-  private directiveFactoriesByName: {[name: string]: Function} = {};
-  private onDirectiveRegistered: (name: string, factory: Function) => any = null;
-
-  register(name: string, factory: Function) {
-    if (angular.isArray(factory)) {
-      factory = factory[factory.length - 1];
-    }
-    this.directiveFactoriesByName[name] = factory;
-    if (this.onDirectiveRegistered) {
-      this.onDirectiveRegistered(name, factory);
-    } else {
-      this.directiveBuffer.push({name: name, factory: factory});
-    }
-  }
-
-  $get() {
-    let fn: any = newOnControllerRegistered => {
-      this.onDirectiveRegistered = newOnControllerRegistered;
-      while (this.directiveBuffer.length > 0) {
-        let directive = this.directiveBuffer.pop();
-        this.onDirectiveRegistered(directive.name, directive.factory);
-      }
-    };
-
-    fn.getTypeByName = name => this.directiveFactoriesByName[name];
-
-    return fn;
-  }
-}
 
 /**
  * @name ngOutlet
@@ -62,7 +25,7 @@ class DirectiveIntrospectorProvider {
  * The value for the `ngOutlet` attribute is optional.
  */
 function ngOutletDirective($animate, $q: ng.IQService, $rootRouter) {
-  let rootRouter = $rootRouter;
+  const rootRouter = $rootRouter;
 
   return {
     restrict: 'AE',
@@ -104,7 +67,7 @@ function ngOutletDirective($animate, $q: ng.IQService, $rootRouter) {
 
       reuse(instruction) {
         let next = $q.when(true);
-        let previousInstruction = this.currentInstruction;
+        const previousInstruction = this.currentInstruction;
         this.currentInstruction = instruction;
         if (this.currentController && this.currentController.$routerOnReuse) {
           next = $q.when(
@@ -148,7 +111,7 @@ function ngOutletDirective($animate, $q: ng.IQService, $rootRouter) {
         this.previousInstruction = this.currentInstruction;
         this.currentInstruction = instruction;
 
-        let componentName = this.controller.$$componentName = instruction.componentType;
+        const componentName = this.controller.$$componentName = instruction.componentType;
 
         if (typeof componentName !== 'string') {
           throw new Error('Component is not a string for ' + instruction.urlPath);
@@ -159,22 +122,24 @@ function ngOutletDirective($animate, $q: ng.IQService, $rootRouter) {
         this.controller.$$router = this.router.childRouter(instruction.componentType);
         this.controller.$$outlet = this;
 
-        let newScope = scope.$new();
+        const newScope = scope.$new();
         newScope.$$router = this.controller.$$router;
         this.deferredActivation = $q.defer();
 
-        let clone = $transclude(newScope, clone => {
+        const clone = $transclude(newScope, clone => {});
+
+        const activateView = () => {
           $animate.enter(clone, null, this.currentElement || element);
           this.cleanupLastView();
-        });
+          this.currentElement = clone;
+          this.currentScope = newScope;
+        };
 
-        this.currentElement = clone;
-        this.currentScope = newScope;
-        return this.deferredActivation.promise;
+        return this.deferredActivation.promise.then(activateView, activateView);
       }
     }
 
-    let parentCtrl = ctrls[0], myCtrl = ctrls[1],
+    const parentCtrl = ctrls[0], myCtrl = ctrls[1],
         router = (parentCtrl && parentCtrl.$$router) || rootRouter;
 
     myCtrl.$$currentComponent = null;
@@ -191,7 +156,7 @@ function ngOutletFillContentDirective($compile) {
     priority: -400,
     require: 'ngOutlet',
     link: (scope, element, attrs, ctrl) => {
-      let template = ctrl.$$template;
+      const template = ctrl.$$template;
       element.html(template);
       $compile(element.contents())(scope);
     }
@@ -205,9 +170,9 @@ function routerTriggerDirective($q) {
     require: '^ngOutlet',
     priority: -1000,
     link: function(scope, element, attr, ngOutletCtrl) {
-      var promise = $q.when();
-      var outlet = ngOutletCtrl.$$outlet;
-      var currentComponent = outlet.currentController =
+      let promise = $q.when();
+      const outlet = ngOutletCtrl.$$outlet;
+      const currentComponent = outlet.currentController =
           element.controller(ngOutletCtrl.$$componentName);
       if (currentComponent.$routerOnActivate) {
         promise = $q.when(currentComponent.$routerOnActivate(outlet.currentInstruction,
@@ -247,18 +212,22 @@ function ngLinkDirective($rootRouter, $parse) {
   return {require: '?^^ngOutlet', restrict: 'A', link: ngLinkDirectiveLinkFn};
 
   function ngLinkDirectiveLinkFn(scope, element, attrs, ctrl) {
-    let router = (ctrl && ctrl.$$router) || $rootRouter;
+    const router = (ctrl && ctrl.$$router) || $rootRouter;
     if (!router) {
       return;
     }
 
-    let instruction = null;
-    let link = attrs.ngLink || '';
+    let navigationInstruction = null;
+    const link = attrs.ngLink || '';
 
     function getLink(params) {
-      instruction = router.generate(params);
+      if (!params) {
+        return;
+      }
 
-      scope.$watch(function() { return router.isRouteActive(instruction); },
+      navigationInstruction = router.generate(params);
+
+      scope.$watch(function() { return router.isRouteActive(navigationInstruction); },
                    function(active) {
                      if (active) {
                        element.addClass('ng-link-active');
@@ -267,13 +236,14 @@ function ngLinkDirective($rootRouter, $parse) {
                      }
                    });
 
-      return './' + angular.stringifyInstruction(instruction);
+      const navigationHref = navigationInstruction.toLinkUrl();
+      return $rootRouter._location.prepareExternalUrl(navigationHref);
     }
 
-    let routeParamsGetter = $parse(link);
+    const routeParamsGetter = $parse(link);
     // we can avoid adding a watcher if it's a literal
     if (routeParamsGetter.constant) {
-      let params = routeParamsGetter();
+      const params = routeParamsGetter();
       element.attr('href', getLink(params));
     } else {
       scope.$watch(() => routeParamsGetter(scope), params => element.attr('href', getLink(params)),
@@ -281,11 +251,11 @@ function ngLinkDirective($rootRouter, $parse) {
     }
 
     element.on('click', event => {
-      if (event.which !== 1 || !instruction) {
+      if (event.which !== 1 || !navigationInstruction) {
         return;
       }
 
-      $rootRouter.navigateByInstruction(instruction);
+      $rootRouter.navigateByInstruction(navigationInstruction);
       event.preventDefault();
     });
   }
@@ -296,17 +266,10 @@ function dashCase(str: string): string {
 }
 
 /*
- * A module for adding new a routing system Angular 1.
+ * A module for adding new a routing system AngularJS.
  */
 angular.module('ngComponentRouter', [])
     .directive('ngOutlet', ['$animate', '$q', '$rootRouter', ngOutletDirective])
     .directive('ngOutlet', ['$compile', ngOutletFillContentDirective])
     .directive('ngLink', ['$rootRouter', '$parse', ngLinkDirective])
     .directive('$router', ['$q', routerTriggerDirective]);
-
-/*
- * A module for inspecting controller constructors
- */
-angular.module('ng')
-    .provider('$$directiveIntrospector', DirectiveIntrospectorProvider)
-    .config(['$compileProvider', '$$directiveIntrospectorProvider', compilerProviderDecorator]);

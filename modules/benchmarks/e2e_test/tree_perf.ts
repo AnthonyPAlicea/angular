@@ -1,45 +1,83 @@
-import {runClickBenchmark, verifyNoBrowserErrors} from 'angular2/src/testing/perf_util';
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
 
-describe('ng2 tree benchmark', function() {
+import {runBenchmark, verifyNoBrowserErrors} from 'e2e_util/perf_util';
+import {$, browser} from 'protractor';
 
-  var URL = 'benchmarks/src/tree/tree_benchmark.html';
+import {Benchmark, Benchmarks, CreateBtn, DestroyBtn, DetectChangesBtn, RootEl} from './tree_data';
 
-  afterEach(verifyNoBrowserErrors);
+describe('tree benchmark perf', () => {
 
-  it('should log the ng stats', function(done) {
-    runClickBenchmark({
-      url: URL,
-      buttons: ['#ng2DestroyDom', '#ng2CreateDom'],
-      id: 'ng2.tree.create.plain',
-      params: [{name: 'depth', value: 9, scale: 'log2'}]
-    }).then(done, done.fail);
+  let _oldRootEl: any;
+  beforeEach(() => _oldRootEl = browser.rootEl);
+
+  afterEach(() => {
+    browser.rootEl = _oldRootEl;
+    verifyNoBrowserErrors();
   });
 
-  it('should log the ng stats (update)', function(done) {
-    runClickBenchmark({
-      url: URL,
-      buttons: ['#ng2CreateDom'],
-      id: 'ng2.tree.update',
-      params: [{name: 'depth', value: 9, scale: 'log2'}]
-    }).then(done, done.fail);
-  });
+  Benchmarks.forEach(benchmark => {
+    describe(benchmark.id, () => {
+      it('should work for createOnly', (done) => {
+        runTreeBenchmark({
+          id: 'createOnly',
+          benchmark,
+          prepare: () => $(CreateBtn).click(),
+          work: () => $(DestroyBtn).click()
+        }).then(done, done.fail);
+      });
 
-  it('should log the baseline stats', function(done) {
-    runClickBenchmark({
-      url: URL,
-      buttons: ['#baselineDestroyDom', '#baselineCreateDom'],
-      id: 'baseline.tree.create',
-      params: [{name: 'depth', value: 9, scale: 'log2'}]
-    }).then(done, done.fail);
-  });
+      it('should work for createDestroy', (done) => {
+        runTreeBenchmark({
+          id: 'createDestroy',
+          benchmark,
+          work: () => {
+            $(DestroyBtn).click();
+            $(CreateBtn).click();
+          }
+        }).then(done, done.fail);
+      });
 
-  it('should log the baseline stats (update)', function(done) {
-    runClickBenchmark({
-      url: URL,
-      buttons: ['#baselineCreateDom'],
-      id: 'baseline.tree.update',
-      params: [{name: 'depth', value: 9, scale: 'log2'}]
-    }).then(done, done.fail);
-  });
+      it('should work for update', (done) => {
+        runTreeBenchmark({id: 'update', benchmark, work: () => $(CreateBtn).click()})
+            .then(done, done.fail);
+      });
 
+      if (benchmark.buttons.indexOf(DetectChangesBtn) !== -1) {
+        it('should work for detectChanges', (done) => {
+          runTreeBenchmark({
+            id: 'detectChanges',
+            benchmark,
+            work: () => $(DetectChangesBtn).click(),
+            setup: () => $(DestroyBtn).click()
+          }).then(done, done.fail);
+        });
+      }
+
+    });
+  });
 });
+
+function runTreeBenchmark({id, benchmark, prepare, setup, work}: {
+  id: string; benchmark: Benchmark, prepare ? () : void; setup ? () : void; work(): void;
+}) {
+  let params = [{name: 'depth', value: 11}];
+  if (benchmark.extraParams) {
+    params = params.concat(benchmark.extraParams);
+  }
+  browser.rootEl = RootEl;
+  return runBenchmark({
+    id: `${benchmark.id}.${id}`,
+    url: benchmark.url,
+    ignoreBrowserSynchronization: benchmark.ignoreBrowserSynchronization,
+    params: params,
+    work: work,
+    prepare: prepare,
+    setup: setup
+  });
+}

@@ -1,3 +1,11 @@
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+
 'use strict';
 
 var fs = require('fs');
@@ -40,8 +48,10 @@ function main(modulesDirectory) {
     return prev + transform(fs.readFileSync(dir + file, 'utf8'));
   }, '');
 
-  var out = moduleTemplate.replace('//{{FACADES}}', facades)
-                .replace('//{{SHARED_CODE}}', sharedCode);
+  // we have to use a function callback for replace to prevent it from interpreting `$`
+  // as a replacement command character
+  var out = moduleTemplate.replace('//{{FACADES}}', function() { return facades; })
+                .replace('//{{SHARED_CODE}}', function() { return sharedCode; });
   return PRELUDE + transform(directives) + out + POSTLUDE;
 }
 
@@ -93,6 +103,7 @@ if (require.main === module) {
     args.shift();  // node
     args.shift();  // scriptfile.js
     if (args.length < 2) {
+      // tslint:disable-next-line:no-console
       console.log("usage: $0 outFile path/to/modules");
       process.exit(1);
     }
@@ -100,6 +111,7 @@ if (require.main === module) {
     var directory = args.shift();
     fs.writeFileSync(outfile, main(directory));
   } catch (e) {
+    // tslint:disable-next-line:no-console
     console.log(e.message);
     process.exit(1);
   }

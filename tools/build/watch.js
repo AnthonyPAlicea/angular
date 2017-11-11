@@ -1,3 +1,11 @@
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+
 var chokidar = require('chokidar');
 var runSequence = require('run-sequence');
 var path = require('path');
@@ -16,9 +24,7 @@ function watch(globs, opts, tasks) {
     if (!Array.isArray(tasks)) tasks = [tasks];
     tasks = tasks.slice();
     tasks.push(tasksDone);
-    runTasks = function runTaskSequence() {
-      runSequence.apply(null, tasks);
-    }
+    runTasks = function runTaskSequence() { runSequence.apply(null, tasks); };
   } else {
     var sync = tasks.length === 0;
     runTasks = function runCallback() {
@@ -28,7 +34,7 @@ function watch(globs, opts, tasks) {
       } catch (e) {
         return tasksDone(e);
       }
-    }
+    };
   }
 
   var events = opts.events = opts.events || ['add', 'change', 'unlink'];
@@ -42,11 +48,8 @@ function watch(globs, opts, tasks) {
   var delay = opts.delay;
   if (delay === undefined) delay = 100;
 
-  var watcher = chokidar.watch(globs, opts).
-      on('all', handleEvent).
-      on('error', function(err) {
-        throw err;
-      });
+  var watcher =
+      chokidar.watch(globs, opts).on('all', handleEvent).on('error', function(err) { throw err; });
 
   var log = function watchLogger(triggerCount) {
     // Don't report change for initial event
@@ -62,12 +65,12 @@ function watch(globs, opts, tasks) {
 
     function prettyTime() {
       var now = new Date();
-      return now.toLocaleDateString() + " at " + now.toLocaleTimeString();
+      return now.toLocaleDateString() + ' at ' + now.toLocaleTimeString();
     }
-  }
+  };
 
   if (opts.log !== undefined && !opts.log) {
-    log = function noopLog(triggerCount) {}
+    log = function noopLog(triggerCount) {};
   }
 
   var close = watcher.close.bind(watcher);
@@ -76,8 +79,8 @@ function watch(globs, opts, tasks) {
     close();
   };
 
-  var eventsRecorded = 0; // Number of events recorded
-  var timeoutId = null; // If non-null, event capture window is open
+  var eventsRecorded = 0;  // Number of events recorded
+  var timeoutId = null;    // If non-null, event capture window is open
 
   if (!ignoreInitial) {
     // synthetic event to kick off the first task run
@@ -112,6 +115,7 @@ function watch(globs, opts, tasks) {
       timeoutId = null;
     }
     if (!useRunSequence && err) {
+      // tslint:disable-next-line:no-console
       console.log('Watch task error:', err.toString());
     }
   }

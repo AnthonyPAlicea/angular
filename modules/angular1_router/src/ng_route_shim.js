@@ -1,4 +1,11 @@
-/** @license Copyright 2014-2016 Google, Inc. http://github.com/angular/angular/LICENSE */
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+
 (function () {
 
   'use strict';
@@ -150,7 +157,7 @@
           }];
 
           // we resolve the locals in a canActivate block
-          componentDefinition.$canActivate = function() {
+          componentDefinition.controller.$canActivate = function() {
             var locals = angular.extend({}, routeCopy.resolve);
 
             angular.forEach(locals, function(value, key) {
@@ -281,7 +288,10 @@
           }
 
           var href = element.attr(hrefAttrName);
-          if (href && $rootRouter.recognize(href)) {
+          var target = element.attr('target');
+          var isExternal = (['_blank', '_parent', '_self', '_top'].indexOf(target) > -1);
+
+          if (href && $rootRouter.recognize(href) && !isExternal) {
             $rootRouter.navigateByUrl(href);
             event.preventDefault();
           }

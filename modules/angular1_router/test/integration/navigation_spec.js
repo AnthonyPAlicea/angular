@@ -1,3 +1,11 @@
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+
 'use strict';
 
 describe('navigation', function () {
@@ -29,15 +37,15 @@ describe('navigation', function () {
     });
     registerDirective('oneCmp', {
       template: '<div>{{oneCmp.number}}</div>',
-      controller: function () {this.number = 'one'}
+      controller: function () {this.number = 'one';}
     });
     registerDirective('twoCmp', {
       template: '<div>{{twoCmp.number}}</div>',
-      controller: function () {this.number = 'two'}
+      controller: function () {this.number = 'two';}
     });
     registerComponent('threeCmp', {
       template: '<div>{{$ctrl.number}}</div>',
-      controller: function () {this.number = 'three'}
+      controller: function () {this.number = 'three';}
     });
     registerComponent('getParams', {
       template: '<div>{{$ctrl.params.x}}</div>',
@@ -46,7 +54,7 @@ describe('navigation', function () {
           this.params = next.params;
         };
       }
-    })
+    });
   });
 
   it('should work in a simple case', function () {
@@ -306,14 +314,15 @@ describe('navigation', function () {
   }));
 
   function registerDirective(name, options) {
+    var controller = getController(options);
     function factory() {
       return {
         template: options.template || '',
         controllerAs: name,
-        controller: getController(options)
+        controller: controller
       };
     }
-    applyStaticProperties(factory, options);
+    applyStaticProperties(controller, options);
     $compileProvider.directive(name, factory);
   }
 
@@ -322,8 +331,8 @@ describe('navigation', function () {
     var definition = {
       template: options.template || '',
       controller: getController(options),
-    }
-    applyStaticProperties(definition, options);
+    };
+    applyStaticProperties(definition.controller, options);
     $compileProvider.component(name, definition);
   }
 

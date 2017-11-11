@@ -1,3 +1,11 @@
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+
 'use strict';
 
 var fs = require('fs');
@@ -48,3 +56,13 @@ tunnel.start(function(error) {
 tunnel.on('error', function(error) {
   console.error(error);
 });
+
+
+// TODO(i): we should properly stop the tunnel when tests are done.
+// tunnel.stop(function(error) {
+//   if (error) {
+//     console.log(error);
+//   } else {
+//     console.log('browserStack tunnel has stopped');
+//   }
+//});

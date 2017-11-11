@@ -1,11 +1,18 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-LOG_FILES=$LOGS_DIR/*
+set -u -e -o pipefail
 
-for FILE in $LOG_FILES; do
-  echo -e "\n\n\n"
-  echo "================================================================================"
-  echo " $FILE"
-  echo "================================================================================"
-  cat $FILE
+# Setup environment
+readonly thisDir=$(cd $(dirname $0); pwd)
+source ${thisDir}/_travis-fold.sh
+
+
+for FILE in ${LOGS_DIR}/*; do
+  travisFoldStart "print log file: ${FILE}"
+    cat $FILE
+  travisFoldEnd "print log file: ${FILE}"
 done
+
+
+# Print return arrows as a log separator
+travisFoldReturnArrows
